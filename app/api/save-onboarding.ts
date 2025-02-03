@@ -13,12 +13,17 @@ interface OnboardingData {
   teamSize?: string
 }
 
+interface Auth {
+  userId: string
+}
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
   try {
-    const { userId } = getAuth(req as any)  // Temporary workaround for Clerk types
+    const auth = getAuth(req)
+    const { userId } = auth as Auth
     
     if (!userId) {
       return res.status(401).json({ error: 'Unauthorized' })
