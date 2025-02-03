@@ -4,10 +4,12 @@ import { useState } from "react"
 
 interface TeamSizeStepProps {
     onNext: (data: { teamSize: string }) => void
+    initialTeamSize?: string
+    isSubmitting: boolean
 }
   
-export default function TeamSizeStep({ onNext }: TeamSizeStepProps) {
-    const [teamSize, setTeamSize] = useState('1-5')
+export default function TeamSizeStep({ onNext, initialTeamSize, isSubmitting }: TeamSizeStepProps) {
+    const [teamSize, setTeamSize] = useState(initialTeamSize || '1-5')
   
     return (
       <div>
@@ -25,6 +27,7 @@ export default function TeamSizeStep({ onNext }: TeamSizeStepProps) {
         <button
           onClick={() => onNext({ teamSize })}
           className="mt-6 px-6 py-2 bg-blue-600 text-white rounded-lg"
+          disabled={isSubmitting}
         >
           Generate My Plan
         </button>

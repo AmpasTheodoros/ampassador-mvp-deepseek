@@ -3,11 +3,12 @@
 import { useState } from "react"
 
 interface DataProcessingProps {
+  initialProcessesUserData?: boolean;
   onNext: (data: { processesUserData: boolean }) => void
 }
 
-export default function DataProcessingStep({ onNext }: DataProcessingProps) {
-    const [processesUserData, setProcessesUserData] = useState(false)
+export default function DataProcessingStep({ onNext, initialProcessesUserData }: DataProcessingProps) {
+    const [processesUserData, setProcessesUserData] = useState(initialProcessesUserData ?? false)
   
     return (
       <div>

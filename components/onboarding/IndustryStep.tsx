@@ -1,10 +1,11 @@
 // components/onboarding/IndustryStep.tsx
 
 interface IndustryStepProps {
+  initialIndustry?: string;
   onNext: (data: { industry: string }) => void
 }
 
-export default function IndustryStep({ onNext }: IndustryStepProps) {
+export default function IndustryStep({ onNext, initialIndustry }: IndustryStepProps) {
     const industries = [
       { id: 'ai', label: 'AI Startup' },
       { id: 'healthcare', label: 'Healthcare' },
@@ -20,7 +21,9 @@ export default function IndustryStep({ onNext }: IndustryStepProps) {
             <button
               key={industry.id}
               onClick={() => onNext({ industry: industry.id })}
-              className="w-full p-4 text-left border rounded-lg hover:bg-gray-50"
+              className={`w-full p-4 text-left border rounded-lg hover:bg-gray-50 ${
+                initialIndustry === industry.id ? 'bg-blue-100 border-blue-500' : ''
+              }`}
             >
               {industry.label}
             </button>

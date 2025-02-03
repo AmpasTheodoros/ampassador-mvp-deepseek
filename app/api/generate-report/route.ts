@@ -17,23 +17,33 @@ export async function GET() {
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      include: { tasks: true }
+      select: {
+        industry: true,
+        tasks: {
+          select: {
+            title: true,
+            dueDate: true,
+            isCompleted: true
+          }
+        }
+      }
     })
 
-    // Rest of the PDF generation code remains the same
+    console.log('PDF Generation - User Data:', user) // Debug log
+
     const pdfDoc = await PDFDocument.create()
     const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica)
     const page = pdfDoc.addPage([600, 800])
     const { height } = page.getSize()
 
-    // Header
+    // Header with fallback
     page.setFont(helveticaFont)
     page.setFontSize(20)
-    page.drawText(`${user?.industry} Compliance Report`, {
+    page.drawText(`${user?.industry || 'Company'} Compliance Report`, {
       x: 50,
       y: height - 50,
     })
-
+    
     // Tasks List
     let yPosition = height - 80
     page.setFontSize(12)

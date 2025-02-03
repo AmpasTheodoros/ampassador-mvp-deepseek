@@ -1,29 +1,45 @@
 // app/dashboard/page.tsx
-'use client'
-import { useEffect, useState } from 'react'
-import Link from 'next/link'
 
-interface Task {
-  id: string
-  title: string
-  dueDate: string
-  isCompleted: boolean
-}
+import Link from "next/link";
+import { auth } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
+import { prisma } from "../../lib/prisma";
 
-export default function DashboardPage() {
-  const [tasks, setTasks] = useState<Task[]>([])
+export default async function Dashboard() {
+  const { userId } = await auth();
 
-  useEffect(() => {
-    fetch('/api/tasks')
-      .then(res => res.json())
-      .then(data => setTasks(data.tasks))
-  }, [])
+  if (!userId) {
+    return redirect("/sign-in");
+  }
+
+  // Ensure user exists in DB
+  let user = await prisma.user.findUnique({ where: { userId } });
+
+  if (!user) {
+    // Fetch user details from Clerk API
+    const clerkRes = await fetch(`https://api.clerk.com/v1/users/${userId}`, {
+      headers: {
+        Authorization: `Bearer ${process.env.CLERK_SECRET_KEY}`,
+      },
+    });
+
+    const clerkUser = await clerkRes.json();
+    if (!clerkUser) return redirect("/sign-in");
+
+    // Save the user in the database
+    user = await prisma.user.create({
+      data: {
+        userId: userId,
+        email: clerkUser.email_addresses[0].email_address,
+      },
+    });
+  }
 
   return (
     <div className="max-w-4xl mx-auto p-6">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-2xl font-bold">Compliance Dashboard</h1>
-        <Link 
+        <Link
           href="/api/generate-report"
           className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
           target="_blank"
@@ -31,36 +47,6 @@ export default function DashboardPage() {
           Download Report
         </Link>
       </div>
-
-      <div className="space-y-4">
-        {tasks.map(task => (
-          <div key={task.id} className="p-4 border rounded-lg bg-white">
-            <div className="flex items-center gap-4">
-              <input
-                type="checkbox"
-                checked={task.isCompleted}
-                onChange={(e) => {
-                  fetch(`/api/tasks/${task.id}`, {
-                    method: 'PATCH',
-                    body: JSON.stringify({ isCompleted: e.target.checked })
-                  }).then(() => {
-                    setTasks(prev => prev.map(t => 
-                      t.id === task.id ? {...t, isCompleted: e.target.checked} : t
-                    ))
-                  })
-                }}
-                className="h-5 w-5"
-              />
-              <div>
-                <p className="font-medium">{task.title}</p>
-                <p className="text-sm text-gray-500">
-                  Due: {new Date(task.dueDate).toLocaleDateString()}
-                </p>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
     </div>
-  )
+  );
 }
