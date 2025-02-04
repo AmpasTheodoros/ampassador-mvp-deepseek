@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
+import { Ratelimit } from '@upstash/ratelimit'
+import { Redis } from '@upstash/redis'
 
 const onboardingSchema = z.object({
   industry: z.enum(['ai', 'healthcare', 'fintech', 'remote']),
@@ -10,11 +12,23 @@ const onboardingSchema = z.object({
   email: z.string().email().optional()
 })
 
+const ratelimit = new Ratelimit({
+  redis: Redis.fromEnv(),
+  limiter: Ratelimit.slidingWindow(5, '10 s'),
+});
+
 export async function POST(req: NextRequest) {
   try {
     const { userId } = await auth()
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const identifier = userId || req.ip || 'anonymous'
+  
+    const { success } = await ratelimit.limit(identifier)
+    if (!success) {
+      return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
     }
 
     const rawBody = await req.json()

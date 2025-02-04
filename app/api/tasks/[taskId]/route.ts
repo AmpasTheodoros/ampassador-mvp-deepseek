@@ -1,23 +1,44 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@clerk/nextjs/server";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 // PATCH: Update task completion status
-export async function PATCH(req: Request, { params }: { params: { taskId: string } }) {
-  const { userId } = await auth();
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: { taskId: string } }
+) {
+  try {
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const task = await prisma.task.findUnique({
+      where: { id: params.taskId }
+    });
+
+    if (!task) {
+      return NextResponse.json({ error: 'Task not found' }, { status: 404 });
+    }
+
+    if (task.userId !== userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    }
+
+    const updatedTask = await prisma.task.update({
+      where: { id: params.taskId },
+      data: { isCompleted: !task.isCompleted }
+    });
+
+    return NextResponse.json(updatedTask);
+
+  } catch (error) {
+    console.error('Task update error:', error);
+    return NextResponse.json(
+      { error: 'Failed to update task' },
+      { status: 500 }
+    );
   }
-
-  const { taskId } = params;
-  const { isCompleted } = await req.json();
-
-  const task = await prisma.task.update({
-    where: { id: taskId },
-    data: { isCompleted },
-  });
-
-  return NextResponse.json(task);
 }
 
 // DELETE: Remove a task
